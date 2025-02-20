@@ -7,7 +7,6 @@ using namespace std;
 // Global Variables
 HWND hEdit1, hEdit2, hButtonAdd, hButtonSub, hButtonMul, hButtonDiv;
 
-// เปลี่ยนสีพื้นหลังของหน้าต่างหลักเป็นสีชมพูเข้ม
 HBRUSH hBrushBackground = CreateSolidBrush(RGB(255, 0, 0));
 HBRUSH hBrushStaticText = CreateSolidBrush(RGB(255, 255, 255));
 
