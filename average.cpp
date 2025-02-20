@@ -27,9 +27,9 @@ int main(int argc, char* argv[]) {
     }
 
     double average = sum / numbers.size();
-    cout << "-----------------------------" << endl;
+    cout << "---------------------------------" << endl;
     cout << "Average of " << numbers.size() << " numbers = " << average << endl;
-    cout << "-----------------------------" << endl;
+    cout << "---------------------------------" << endl;
 
     return 0;
 }
