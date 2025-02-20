@@ -1,66 +1,126 @@
 #include <windows.h>
+#include <string>
+#include <sstream>
 
-/* This is where all the input to the window goes to */
-LRESULT CALLBACK WndProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam) {
-	switch(Message) {
-		
-		/* Upon destruction, tell the main thread to stop */
-		case WM_DESTROY: {
-			PostQuitMessage(0);
-			break;
-		}
-		
-		/* All other messages (a lot of them) are processed using default procedures */
-		default:
-			return DefWindowProc(hwnd, Message, wParam, lParam);
-	}
-	return 0;
+using namespace std;
+
+// Global Variables
+HWND hEdit1, hEdit2, hButtonAdd, hButtonSub, hButtonMul, hButtonDiv;
+
+// เปลี่ยนสีพื้นหลังของหน้าต่างหลักเป็นสีชมพูเข้ม
+HBRUSH hBrushBackground = CreateSolidBrush(RGB(255, 0, 0));
+HBRUSH hBrushStaticText = CreateSolidBrush(RGB(255, 255, 255));
+
+// Function to Convert Text to Double
+double GetValueFromEditBox(HWND hEdit) {
+    char buffer[256];
+    GetWindowText(hEdit, buffer, 256);
+    return atof(buffer);
 }
 
-/* The 'main' function of Win32 GUI programs: this is where execution starts */
+// Function to Display Result in Message Box
+void ShowResult(double result) {
+    char buffer[256];
+    sprintf(buffer, "%.6f", result);
+    MessageBox(NULL, buffer, "Result", MB_OK);
+}
+
+// Window Procedure
+LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+    switch (msg) {
+        case WM_CREATE: {
+            // Static Text (สีขาว)
+            CreateWindow("STATIC", "Please input two numbers", WS_VISIBLE | WS_CHILD,
+                         50, 20, 200, 20, hwnd, NULL, NULL, NULL);
+
+            // ช่องกรอกตัวเลข
+            hEdit1 = CreateWindow("EDIT", "", WS_VISIBLE | WS_CHILD | WS_BORDER | ES_AUTOHSCROLL,
+                                  50, 50, 200, 25, hwnd, NULL, NULL, NULL);
+            hEdit2 = CreateWindow("EDIT", "", WS_VISIBLE | WS_CHILD | WS_BORDER | ES_AUTOHSCROLL,
+                                  50, 80, 200, 25, hwnd, NULL, NULL, NULL);
+
+            // ปุ่มเครื่องหมาย +, -, *, /
+            hButtonAdd = CreateWindow("BUTTON", "+", WS_VISIBLE | WS_CHILD | WS_BORDER,
+                                      50, 120, 40, 30, hwnd, (HMENU)1, NULL, NULL);
+            hButtonSub = CreateWindow("BUTTON", "-", WS_VISIBLE | WS_CHILD | WS_BORDER,
+                                      100, 120, 40, 30, hwnd, (HMENU)2, NULL, NULL);
+            hButtonMul = CreateWindow("BUTTON", "*", WS_VISIBLE | WS_CHILD | WS_BORDER,
+                                      150, 120, 40, 30, hwnd, (HMENU)3, NULL, NULL);
+            hButtonDiv = CreateWindow("BUTTON", "/", WS_VISIBLE | WS_CHILD | WS_BORDER,
+                                      200, 120, 40, 30, hwnd, (HMENU)4, NULL, NULL);
+            break;
+        }
+
+        case WM_COMMAND: {
+            double num1 = GetValueFromEditBox(hEdit1);
+            double num2 = GetValueFromEditBox(hEdit2);
+            double result = 0.0;
+
+            switch (LOWORD(wParam)) {
+                case 1: result = num1 + num2; ShowResult(result); break;
+                case 2: result = num1 - num2; ShowResult(result); break;
+                case 3: result = num1 * num2; ShowResult(result); break;
+                case 4: 
+                    if (num2 != 0) {
+                        result = num1 / num2;
+                    } else {
+                        MessageBox(NULL, "Error: Division by zero!", "Error", MB_OK | MB_ICONERROR);
+                        return 0;
+                    }
+                    ShowResult(result); 
+                    break;
+            }
+            break;
+        }
+
+        case WM_CTLCOLORSTATIC: { // เปลี่ยนสีพื้นหลังของ Static Text เป็นสีขาว
+            HDC hdcStatic = (HDC) wParam;
+            SetBkColor(hdcStatic, RGB(255, 255, 255)); // ตั้งค่าสีพื้นหลังเป็นขาว
+            return (LRESULT) hBrushStaticText; // คืนค่า brush สีขาว
+        }
+
+        case WM_DESTROY:
+            PostQuitMessage(0);
+            break;
+
+        default:
+            return DefWindowProc(hwnd, msg, wParam, lParam);
+    }
+    return 0;
+}
+
+// Main Function (Entry Point)
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
-	WNDCLASSEX wc; /* A properties struct of our window */
-	HWND hwnd; /* A 'HANDLE', hence the H, or a pointer to our window */
-	MSG msg; /* A temporary location for all messages */
+    WNDCLASSEX wc = {0};
+    wc.cbSize = sizeof(WNDCLASSEX);
+    wc.lpfnWndProc = WndProc;
+    wc.hInstance = hInstance;
+    wc.lpszClassName = "Calculator";
+    wc.hbrBackground = hBrushBackground;  // ใช้สีพื้นหลังสีชมพูเข้ม
 
-	/* zero out the struct and set the stuff we want to modify */
-	memset(&wc,0,sizeof(wc));
-	wc.cbSize	 = sizeof(WNDCLASSEX);
-	wc.lpfnWndProc	 = WndProc; /* This is where we will send messages to */
-	wc.hInstance	 = hInstance;
-	wc.hCursor	 = LoadCursor(NULL, IDC_ARROW);
-	
-	/* White, COLOR_WINDOW is just a #define for a system color, try Ctrl+Clicking it */
-	wc.hbrBackground = (HBRUSH)(COLOR_WINDOW+1);
-	wc.lpszClassName = "WindowClass";
-	wc.hIcon	 = LoadIcon(NULL, IDI_APPLICATION); /* Load a standard icon */
-	wc.hIconSm	 = LoadIcon(NULL, IDI_APPLICATION); /* use the name "A" to use the project icon */
+    if (!RegisterClassEx(&wc)) {
+        MessageBox(NULL, "Window Registration Failed!", "Error!", MB_ICONEXCLAMATION | MB_OK);
+        return 0;
+    }
 
-	if(!RegisterClassEx(&wc)) {
-		MessageBox(NULL, "Window Registration Failed!","Error!",MB_ICONEXCLAMATION|MB_OK);
-		return 0;
-	}
+    HWND hwnd = CreateWindow("Calculator", "My Calculator",
+                             WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
+                             CW_USEDEFAULT, CW_USEDEFAULT, 300, 250, // ขนาดหน้าต่าง
+                             NULL, NULL, hInstance, NULL);
 
-	hwnd = CreateWindowEx(WS_EX_CLIENTEDGE,"WindowClass","Caption",WS_VISIBLE|WS_OVERLAPPEDWINDOW,
-		CW_USEDEFAULT, /* x */
-		CW_USEDEFAULT, /* y */
-		640, /* width */
-		480, /* height */
-		NULL,NULL,hInstance,NULL);
+    if (hwnd == NULL) {
+        MessageBox(NULL, "Window Creation Failed!", "Error!", MB_ICONEXCLAMATION | MB_OK);
+        return 0;
+    }
 
-	if(hwnd == NULL) {
-		MessageBox(NULL, "Window Creation Failed!","Error!",MB_ICONEXCLAMATION|MB_OK);
-		return 0;
-	}
+    ShowWindow(hwnd, nCmdShow);
+    UpdateWindow(hwnd);
 
-	/*
-		This is the heart of our program where all input is processed and 
-		sent to WndProc. Note that GetMessage blocks code flow until it receives something, so
-		this loop will not produce unreasonably high CPU usage
-	*/
-	while(GetMessage(&msg, NULL, 0, 0) > 0) { /* If no error is received... */
-		TranslateMessage(&msg); /* Translate key codes to chars if present */
-		DispatchMessage(&msg); /* Send it to WndProc */
-	}
-	return msg.wParam;
+    MSG msg;
+    while (GetMessage(&msg, NULL, 0, 0)) {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+
+    return msg.wParam;
 }
